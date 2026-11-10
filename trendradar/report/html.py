@@ -927,6 +927,63 @@ def render_html_content(
             }
             body.wide-mode .standalone-group { margin-bottom: 0; }
 
+            /* 紧凑热榜 */
+            body:not(.report-export) .hotlist-section .word-group { margin-bottom: 26px; }
+            body:not(.report-export) .hotlist-section .word-header { margin-bottom: 6px; }
+            @media (min-width: 960px) {
+                body.wide-mode .hotlist-items {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    column-gap: 20px;
+                }
+            }
+            body:not(.report-export) .hotlist-items .news-item {
+                min-width: 0;
+                margin: 0;
+                padding: 7px 8px;
+                gap: 8px;
+                min-height: 38px;
+            }
+            body:not(.report-export) .hotlist-items .news-item:hover {
+                background: rgba(99, 102, 241, 0.07);
+            }
+            body:not(.report-export) .hotlist-items .news-number {
+                align-self: center;
+                margin-top: 0;
+            }
+            body:not(.report-export) .hotlist-items .news-content {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) fit-content(45%);
+                align-items: center;
+                gap: 8px;
+                padding: 0;
+            }
+            body:not(.report-export) .hotlist-items .news-header {
+                grid-column: 2;
+                grid-row: 1;
+                justify-content: flex-end;
+                flex-wrap: nowrap;
+                gap: 5px;
+                min-width: 0;
+                overflow: hidden;
+                white-space: nowrap;
+                margin: 0;
+            }
+            body:not(.report-export) .hotlist-items .news-title {
+                grid-column: 1;
+                grid-row: 1;
+                font-size: 14px;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+            body:not(.report-export) .hotlist-items .news-item.new::after {
+                position: static;
+                flex-shrink: 0;
+                font-size: 8px;
+                padding: 1px 4px;
+            }
+
             /* Tab 栏 */
             .tab-bar-wrapper {
                 position: sticky;
@@ -1622,7 +1679,8 @@ def render_html_content(
                             <div class="word-count {count_class}">{count} 条</div>
                         </div>
                         <div class="word-index"><span class="collapse-icon">▼</span>{i}/{total_count}</div>
-                    </div>"""
+                    </div>
+                    <div class="hotlist-items">"""
 
             # 处理每个词组下的新闻标题，给每条新闻标上序号
             for j, title_data in enumerate(stat["titles"], 1):
@@ -1694,12 +1752,11 @@ def render_html_content(
                 if count_info > 1:
                     stats_html += f'<span class="count-info">{count_info}次</span>'
 
-                stats_html += """
-                            </div>
-                            <div class="news-title">"""
-
                 # 处理标题和链接
                 escaped_title = html_escape(title_data["title"])
+                stats_html += f"""
+                            </div>
+                            <div class="news-title" title="{escaped_title}">"""
                 link_url = title_data.get("mobile_url") or title_data.get("url", "")
 
                 if link_url:
@@ -1714,6 +1771,7 @@ def render_html_content(
                     </div>"""
 
             stats_html += """
+                    </div>
                 </div>"""
 
     # 给热榜统计添加外层包装
@@ -2492,6 +2550,7 @@ def render_html_content(
                     hiddenGroups: []
                 };
                 document.body.classList.remove('wide-mode');
+                document.body.classList.add('report-export');
                 state.wasDark = document.body.classList.contains('dark-mode');
                 document.body.classList.remove('dark-mode');
                 document.querySelectorAll('.word-group[data-tab-index]').forEach(function(g, i) {
@@ -2520,6 +2579,7 @@ def render_html_content(
             }
 
             function restoreAfterScreenshot(state) {
+                document.body.classList.remove('report-export');
                 if (state.wasWide) document.body.classList.add('wide-mode');
                 if (state.wasDark) document.body.classList.add('dark-mode');
                 var groups = document.querySelectorAll('.word-group[data-tab-index]');
