@@ -5,6 +5,7 @@ HTML 报告渲染模块
 提供 HTML 格式的热点新闻报告生成功能
 """
 
+import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Callable
 
@@ -51,6 +52,12 @@ def render_html_content(
     default_region_order = ["hotlist", "rss", "new_items", "standalone", "ai_analysis"]
     if region_order is None:
         region_order = default_region_order
+
+    refresh_repository = os.environ.get("PAGES_REFRESH_REPOSITORY")
+    refresh_workflow = (
+        f"https://github.com/{html_escape(refresh_repository)}/actions/workflows/crawler.yml"
+        if refresh_repository else ""
+    )
 
     html = """
     <!DOCTYPE html>
@@ -115,6 +122,44 @@ def render_html_content(
                 gap: 8px;
                 z-index: 10;
             }
+
+            .refresh-button {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 8px 12px;
+                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                font-size: 13px;
+                white-space: nowrap;
+                text-decoration: none;
+            }
+            .refresh-button:hover { background: rgba(255, 255, 255, 0.3); }
+            .refresh-button[aria-busy="true"] { opacity: 0.7; cursor: wait; }
+            .refresh-status { text-align: center; font-size: 13px; }
+            .refresh-status a { color: inherit; margin-left: 6px; }
+            .refresh-dialog {
+                width: min(360px, calc(100% - 32px));
+                border: 0;
+                border-radius: 12px;
+                padding: 22px;
+                color: #1e293b;
+                box-shadow: 0 12px 36px rgba(15, 23, 42, 0.25);
+            }
+            .refresh-dialog::backdrop { background: rgba(15, 23, 42, 0.55); }
+            .refresh-dialog label, .refresh-dialog input { display: block; width: 100%; }
+            .refresh-dialog input {
+                margin: 8px 0;
+                padding: 9px;
+                border: 1px solid #cbd5e1;
+                border-radius: 6px;
+            }
+            .refresh-dialog p { font-size: 13px; }
+            .refresh-dialog .refresh-auth-error { color: #b91c1c; }
+            .refresh-dialog .refresh-actions { display: flex; justify-content: flex-end; gap: 8px; }
+            .refresh-dialog button { padding: 6px 12px; cursor: pointer; }
 
             .save-btn-group {
                 position: relative;
@@ -626,6 +671,7 @@ def render_html_content(
                     position: static;
                     margin-bottom: 16px;
                     display: flex;
+                    flex-wrap: wrap;
                     gap: 8px;
                     justify-content: center;
                     width: 100%;
@@ -1485,7 +1531,11 @@ def render_html_content(
         <div class="container">
             <div class="header">
                 <div class="header-watermark">TrendRadar</div>
-                <div class="save-buttons">
+                <div class="save-buttons">"""
+    if refresh_workflow:
+        html += f"""
+                    <a class="refresh-button" href="{refresh_workflow}" target="_blank" rel="noopener">↻ 更新榜单</a>"""
+    html += """
                     <button class="toggle-wide-btn" onclick="toggleWideMode()" title="切换宽屏/窄屏">⛶</button>
                     <button class="toggle-dark-btn" onclick="toggleDarkMode()" title="切换暗色/亮色">☽</button>
                     <div class="save-btn-group">
@@ -1498,7 +1548,26 @@ def render_html_content(
                         </div>
                     </div>
                 </div>
-                <div class="header-title">热点新闻分析</div>
+                <div class="header-title">热点新闻分析</div>"""
+    if refresh_workflow:
+        html += f"""
+                <div class="refresh-status" role="status">
+                    <span></span><a href="{refresh_workflow}" target="_blank" rel="noopener" hidden>打开 GitHub Actions</a>
+                </div>
+                <dialog class="refresh-dialog" aria-label="更新榜单">
+                    <form>
+                        <label for="refresh-key">更新口令</label>
+                        <input id="refresh-key" type="password" autocomplete="current-password" maxlength="128">
+                        <p>验证后，本浏览器 30 天内可直接点击更新。</p>
+                        <p class="refresh-auth-error" role="alert"></p>
+                        <div class="refresh-actions">
+                            <button type="button" class="refresh-cancel">取消</button>
+                            <button type="submit">开始更新</button>
+                        </div>
+                    </form>
+                </dialog>
+                <script src="/refresh.js" defer></script>"""
+    html += """
                 <div class="header-info">"""
 
     # 使用提供的时间函数或默认 datetime.now
