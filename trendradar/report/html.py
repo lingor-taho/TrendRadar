@@ -955,6 +955,18 @@ def render_html_content(
                 mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent);
                 -webkit-mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent);
             }
+            .tab-bar-wrapper .tab-bar {
+                flex-wrap: wrap;
+                overflow: visible;
+                row-gap: 6px;
+                mask-image: none;
+                -webkit-mask-image: none;
+            }
+            .tab-bar-wrapper .tab-btn {
+                max-width: 100%;
+                white-space: normal;
+                overflow-wrap: anywhere;
+            }
             .tab-bar::-webkit-scrollbar { display: none; }
             .tab-bar.scroll-start {
                 mask-image: linear-gradient(to right, black, black calc(100% - 24px), transparent);
@@ -2301,16 +2313,12 @@ def render_html_content(
                 var tabs = tabBar.querySelectorAll('.tab-btn');
                 var groups = document.querySelectorAll('.word-group[data-tab-index]');
                 initTabVisibility();
-                initTabScroll(tabBar);
 
-                function activateTab(index, scroll) {
+                function activateTab(index) {
                     tabs.forEach(function(t) { t.classList.remove('active'); });
                     if (index === 'all') {
                         var allBtn = tabBar.querySelector('[data-tab-index="all"]');
-                        if (allBtn) {
-                            allBtn.classList.add('active');
-                            if (scroll !== false) allBtn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-                        }
+                        if (allBtn) allBtn.classList.add('active');
                         groups.forEach(function(g) { g.style.display = ''; });
                         try { history.replaceState(null, '', '#all'); } catch(e) {}
                         return;
@@ -2324,8 +2332,6 @@ def render_html_content(
                             g.style.display = (parseInt(g.dataset.tabIndex) === idx) ? '' : 'none';
                         });
                     }
-                    var activeBtn = tabBar.querySelector('.tab-btn.active');
-                    if (scroll !== false && activeBtn) activeBtn.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
                     try { history.replaceState(null, '', '#tab-' + idx); } catch(e) {}
                 }
 
@@ -2352,7 +2358,7 @@ def render_html_content(
                 var hash = window.location.hash;
                 if (hash === '#all') { activateTab('all'); }
                 else if (hash.indexOf('#tab-') === 0) { activateTab(parseInt(hash.replace('#tab-', ''))); }
-                else { activateTab(0, false); }
+                else { activateTab(0); }
             }
 
             function initTabVisibility() {
