@@ -1,6 +1,7 @@
 const repository = 'https://api.github.com/repos/lingor-taho/TrendRadar';
 const workflow = `${repository}/actions/workflows/crawler.yml`;
 const sessionCookie = '__Secure-trendradar_refresh';
+const sessionMaxAge = 30 * 24 * 60 * 60;
 const encoder = new TextEncoder();
 
 function json(body, status = 200, cookie) {
@@ -19,6 +20,14 @@ async function matches(provided, expected) {
     return crypto.subtle.timingSafeEqual(a, b);
 }
 
+async function signSession(secret, expiresAt) {
+    const key = await crypto.subtle.importKey(
+        'raw', encoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
+    );
+    const signature = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(expiresAt)));
+    return Array.from(signature, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
 export async function onRequest({ request, env }) {
     const url = new URL(request.url);
     const isDispatch = request.method === 'POST';
@@ -30,14 +39,18 @@ export async function onRequest({ request, env }) {
 
     const cookieValue = (request.headers.get('Cookie') || '').split(';').map(value => value.trim())
         .find(value => value.startsWith(`${sessionCookie}=`))?.slice(sessionCookie.length + 1);
-    const session = Array.from(await digest(`trendradar-refresh-session:${env.REFRESH_ACCESS_KEY}`),
-        byte => byte.toString(16).padStart(2, '0')).join('');
+    const [expiresAt, signature] = (cookieValue || '').split('.');
+    const now = Math.floor(Date.now() / 1000);
+    const validSession = /^\d{10}$/.test(expiresAt) && Number(expiresAt) > now &&
+        await matches(signature, await signSession(env.REFRESH_ACCESS_KEY, expiresAt));
     let cookie;
-    if (!(await matches(cookieValue, session))) {
+    if (!validSession) {
         if (!isDispatch || !(await matches(request.headers.get('X-Refresh-Key'), env.REFRESH_ACCESS_KEY))) {
             return json({ error: 'authorization' }, 401);
         }
-        cookie = `${sessionCookie}=${session}; Path=/api/refresh; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict`;
+        const expiry = String(now + sessionMaxAge);
+        const sessionSignature = await signSession(env.REFRESH_ACCESS_KEY, expiry);
+        cookie = `${sessionCookie}=${expiry}.${sessionSignature}; Path=/api/refresh; Max-Age=${sessionMaxAge}; HttpOnly; Secure; SameSite=Strict`;
     }
 
     const headers = {
