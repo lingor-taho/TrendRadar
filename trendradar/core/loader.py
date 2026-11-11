@@ -233,6 +233,7 @@ def _load_display_config(config_data: Dict) -> Dict:
     return {
         # 区域显示顺序
         "REGION_ORDER": region_order,
+        "RSS_PLATFORM_FEEDS": display.get("rss_platform_feeds") or [],
         # 区域开关
         "REGIONS": {
             "HOTLIST": regions.get("hotlist", True),

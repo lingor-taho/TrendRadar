@@ -362,6 +362,7 @@ class AppContext:
             rss_items=rss_items,
             rss_new_items=rss_new_items,
             display_mode=self.display_mode,
+            rss_platform_feeds=self.config.get("DISPLAY", {}).get("RSS_PLATFORM_FEEDS"),
             ai_analysis=ai_analysis,
             show_new_section=self.show_new_section,
             standalone_data=standalone_data,

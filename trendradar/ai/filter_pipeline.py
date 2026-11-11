@@ -571,6 +571,8 @@ class AIFilterPipeline:
                 }
 
                 if source_type == "rss":
+                    title_entry["feed_id"] = item.get("source_id", "")
+                    title_entry["published_at"] = first_time
                     rss_titles.append(title_entry)
                 else:
                     hotlist_titles.append(title_entry)

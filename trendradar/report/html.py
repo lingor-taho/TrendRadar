@@ -13,6 +13,25 @@ from trendradar.utils.time import convert_time_for_display
 from trendradar.ai.formatter import render_ai_analysis_html_rich
 
 
+def _split_rss_stats(
+    stats: List[Dict], platform_feeds: List[str]
+) -> tuple[dict[str, List[Dict]], List[Dict]]:
+    """按源 ID 拆分平台条目和仍在 RSS 区域展示的条目。"""
+    by_feed = {feed_id: [] for feed_id in platform_feeds}
+    remaining = []
+    for stat in stats:
+        titles = []
+        for item in stat["titles"]:
+            feed_id = item.get("feed_id")
+            if feed_id in by_feed:
+                by_feed[feed_id].append(item)
+            else:
+                titles.append(item)
+        if titles:
+            remaining.append({**stat, "titles": titles})
+    return by_feed, remaining
+
+
 def render_html_content(
     report_data: Dict,
     total_titles: int,
@@ -23,6 +42,7 @@ def render_html_content(
     get_time_func: Optional[Callable[[], datetime]] = None,
     rss_items: Optional[List[Dict]] = None,
     rss_new_items: Optional[List[Dict]] = None,
+    rss_platform_feeds: Optional[List[str]] = None,
     display_mode: str = "keyword",
     standalone_data: Optional[Dict] = None,
     ai_analysis: Optional[Any] = None,
@@ -39,6 +59,7 @@ def render_html_content(
         get_time_func: 获取当前时间的函数（可选，默认使用 datetime.now）
         rss_items: RSS 统计条目列表（可选）
         rss_new_items: RSS 新增条目列表（可选）
+        rss_platform_feeds: 在网页中使用平台样式的 RSS 源 ID 列表（可选）
         display_mode: 显示模式 ("keyword"=按关键词分组, "platform"=按平台分组)
         standalone_data: 独立展示区数据（可选），包含 platforms 和 rss_feeds
         ai_analysis: AI 分析结果对象（可选），AIAnalysisResult 实例
@@ -1643,22 +1664,37 @@ def render_html_content(
                 </div>"""
 
     # 生成热点词汇统计部分的HTML
+    display_stats = report_data["stats"]
+    if display_mode == "platform" and rss_platform_feeds and "hotlist" in region_order:
+        rss_by_feed, rss_items = _split_rss_stats(rss_items or [], rss_platform_feeds)
+        _, rss_new_items = _split_rss_stats(rss_new_items or [], rss_platform_feeds)
+        display_stats = list(display_stats)
+        for feed_id, titles in rss_by_feed.items():
+            if not titles:
+                continue
+            titles.sort(key=lambda item: item.get("published_at") or "", reverse=True)
+            display_stats.append({
+                "word": titles[0].get("source_name") or feed_id,
+                "count": len(titles),
+                "titles": [{**item, "ranks": []} for item in titles],
+            })
+
     stats_html = ""
     tab_bar_html = ""
-    if report_data["stats"]:
-        total_count = len(report_data["stats"])
+    if display_stats:
+        total_count = len(display_stats)
 
         # 生成 Tab 栏 HTML
-        total_news_count = sum(s["count"] for s in report_data["stats"])
+        total_news_count = sum(s["count"] for s in display_stats)
         tab_bar_html = '<div class="tab-bar-wrapper"><div class="tab-bar">'
         tab_bar_html += f'<button class="tab-btn" data-tab-index="all">全部<span class="tab-count">{total_news_count}</span></button>'
-        for tab_i, tab_stat in enumerate(report_data["stats"]):
+        for tab_i, tab_stat in enumerate(display_stats):
             escaped_tab_word = html_escape(tab_stat["word"])
             tab_count = tab_stat["count"]
             tab_bar_html += f'<button class="tab-btn" data-tab-index="{tab_i}">{escaped_tab_word}<span class="tab-count">{tab_count}</span></button>'
         tab_bar_html += '</div></div>'
 
-        for i, stat in enumerate(report_data["stats"], 1):
+        for i, stat in enumerate(display_stats, 1):
             count = stat["count"]
 
             # 确定热度等级
