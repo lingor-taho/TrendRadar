@@ -78,15 +78,9 @@ platforms:
     - id: "thepaper"
       name: "澎湃新闻"
       expected_domain: "thepaper.cn"
-    - id: "bilibili-hot-search"
-      name: "bilibili 热搜"
-      expected_domain: "bilibili.com"
     - id: "cls-hot"
       name: "财联社热门"
       expected_domain: "cls.cn"
-    - id: "ifeng"
-      name: "凤凰网"
-      expected_domain: "ifeng.com"
     - id: "tieba"
       name: "贴吧"
       expected_domain: "baidu.com"
@@ -102,9 +96,6 @@ platforms:
     - id: "github-trending-today"
       name: "GitHub Trending"
       expected_domain: "github.com"
-    - id: "hackernews"
-      name: "Hacker News"
-      expected_domain: "news.ycombinator.com"
 
 
 
